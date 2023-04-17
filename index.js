@@ -11,26 +11,26 @@ class LineNotifier {
     this._redierct_uri = redirect_uri;
   }
 
-  checkAuthParameters() {
-    if (this._client_id !== "string" || this._client_id.trim() === "") {
+  #checkAuthParameters() {
+    if (typeof this._client_id !== "string" || this._client_id.trim() === "") {
       throw new Error("client_id is required");
     }
-    if (this._client_secret !== "string" || this._client_secret.trim() === "") {
+    if (typeof this._client_secret !== "string" || this._client_secret.trim() === "") {
       throw new Error("client_secret is required");
     }
-    if (this._redierct_uri !== "string" || this._redierct_uri.trim() === "") {
+    if (typeof this._redierct_uri !== "string" || this._redierct_uri.trim() === "") {
       throw new Error("redirect_uri is required");
     }
   }
 
-  checkAccessToken(accessToken) {
+  #checkAccessToken(accessToken) {
     if (typeof accessToken !== "string" || accessToken.trim() === "") {
       throw new Error("Access token is required");
     }
   }
 
   async send(accessToken, params) {
-    this.checkAccessToken(accessToken);
+    this.#checkAccessToken(accessToken);
 
     const { message } = params;
     if (typeof message !== "string" || message.trim() === "") {
@@ -147,7 +147,7 @@ class LineNotifier {
   }
 
   async status(accessToken) {
-    this.checkAccessToken(accessToken);
+    this.#checkAccessToken(accessToken);
     const options = {
       hostname: "notify-api.line.me",
       path: "/api/status",
@@ -185,7 +185,7 @@ class LineNotifier {
     });
   }
   async revoke(accessToken) {
-    this.checkAccessToken(accessToken);
+    this.#checkAccessToken(accessToken);
     const options = {
       hostname: "notify-api.line.me",
       path: "/api/revoke",
@@ -225,7 +225,7 @@ class LineNotifier {
   }
 
   authorize(state, form_post = false) {
-    this.checkAuthParameters();
+    this.#checkAuthParameters();
 
     const url = `https://notify-bot.line.me/oauth/authorize?response_type=code&scope=notify&client_id=${
       this._client_id
@@ -236,7 +236,7 @@ class LineNotifier {
   }
 
   getAccessToken(code) {
-    this.checkAuthParameters();
+    this.#checkAuthParameters();
     const payload = querystring.stringify({
       grant_type: "authorization_code",
       code,
