@@ -2,18 +2,35 @@
 
 A light-weight line notify library without dependencies only buit-in library used
 
-### This library not include Authentication flow yet
-
 ## Quick Start
 
 ```js
 const LineNotifier = require("../index");
-const linenotify = new LineNotifier("Access Token");
+const linenotify = new LineNotifier(
+  "client_id",
+  "client_secret",
+  "redirect_uri"
+);
 ```
 
-send notify function works by pass parameter name from [LINE Notify API Document](https://notify-bot.line.me/doc/en/) in **Notification** section as key of object
+Get Login url
 
 ```js
-linenotify.send({ message: "Hello World" });
-linenotify.send({ message: "Hello World", imageFile: "./image.jpg" });
+const url = linenotify.authorize("RandomState");
+```
+
+Get accessToken
+
+```js
+linenotify.getAccessToken("code").then((res) => console.log(res));
+```
+
+Send notify function works by pass parameter name from [LINE Notify API Document](https://notify-bot.line.me/doc/en/) in **Notification** section as key of object
+
+```js
+linenotify.send("AccessToken", { message: "Hello World" });
+linenotify.send("AccessToken", {
+  message: "Hello World",
+  imageFile: "./image.jpg",
+});
 ```

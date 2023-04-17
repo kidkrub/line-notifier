@@ -2,23 +2,39 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const verifyImage = require("./utils/imagefileverify");
+const querystring = require("querystring");
 
 class LineNotifier {
-  constructor(accessToken) {
-    this._accessToken = accessToken;
-  }
-  get accessToken() {
-    return this._accessToken;
+  constructor(client_id, client_secret, redirect_uri) {
+    this._client_id = client_id;
+    this._client_secret = client_secret;
+    this._redierct_uri = redirect_uri;
   }
 
-  async send(params) {
+  checkAuthParameters() {
+    if (this._client_id !== "string" || this._client_id.trim() === "") {
+      throw new Error("client_id is required");
+    }
+    if (this._client_secret !== "string" || this._client_secret.trim() === "") {
+      throw new Error("client_secret is required");
+    }
+    if (this._redierct_uri !== "string" || this._redierct_uri.trim() === "") {
+      throw new Error("redirect_uri is required");
+    }
+  }
+
+  checkAccessToken(accessToken) {
+    if (typeof accessToken !== "string" || accessToken.trim() === "") {
+      throw new Error("Access token is required");
+    }
+  }
+
+  async send(accessToken, params) {
+    this.checkAccessToken(accessToken);
+
     const { message } = params;
     if (typeof message !== "string" || message.trim() === "") {
       throw new Error("message is required");
-    }
-
-    if (!this.accessToken) {
-      throw new Error("Access token is required");
     }
 
     for (const [key, value] of Object.entries(params)) {
@@ -130,16 +146,14 @@ class LineNotifier {
     });
   }
 
-  async status() {
-    if (!this.accessToken) {
-      throw new Error("Access token is required");
-    }
+  async status(accessToken) {
+    this.checkAccessToken(accessToken);
     const options = {
       hostname: "notify-api.line.me",
       path: "/api/status",
       method: "GET",
       headers: {
-        Authorization: `Bearer ${this._accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     };
 
@@ -170,16 +184,14 @@ class LineNotifier {
       req.end();
     });
   }
-  async revoke() {
-    if (!this.accessToken) {
-      throw new Error("Access token is required");
-    }
+  async revoke(accessToken) {
+    this.checkAccessToken(accessToken);
     const options = {
       hostname: "notify-api.line.me",
       path: "/api/revoke",
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this._accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
     };
@@ -208,6 +220,66 @@ class LineNotifier {
           reject(error);
         });
       });
+      req.end();
+    });
+  }
+
+  authorize(state, form_post = false) {
+    this.checkAuthParameters();
+
+    const url = `https://notify-bot.line.me/oauth/authorize?response_type=code&scope=notify&client_id=${
+      this._client_id
+    }&redirect_uri=${this._redierct_uri}&state=${state}${
+      form_post ? `&response_mode=form_post` : ``
+    }`;
+    return url;
+  }
+
+  getAccessToken(code) {
+    this.checkAuthParameters();
+    const payload = querystring.stringify({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: this._redierct_uri,
+      client_id: this._client_id,
+      client_secret: this._client_secret,
+    });
+
+    const options = {
+      hostname: "notify-bot.line.me",
+      path: "/oauth/token",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": payload.length,
+      },
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let responseBody = "";
+        res.setEncoding("utf-8");
+
+        res.on("data", (chunk) => {
+          responseBody += chunk;
+        });
+
+        res.on("end", () => {
+          if (res.statusCode === 200) {
+            const response = {};
+            response["body"] = JSON.parse(responseBody);
+            response["headers"] = res.headers;
+            resolve(response);
+          } else {
+            reject(new Error(`status code ${res.statusCode}: ${responseBody}`));
+          }
+        });
+
+        req.on("error", (error) => {
+          reject(error);
+        });
+      });
+      req.write(payload);
       req.end();
     });
   }
