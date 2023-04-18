@@ -86,7 +86,7 @@ class LineNotifier {
       path: "/api/notify",
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this._accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": `multipart/form-data; boundary=${boundary}`,
       },
     };
